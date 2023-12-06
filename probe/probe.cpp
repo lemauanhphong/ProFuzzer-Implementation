@@ -63,6 +63,7 @@ void parse_map_file(string filepath, uint8_t *cov)
     int a, b;
     while (fscanf(f, "%u:%u", &a, &b) != -1)
         cov[a] = b, max_cov_used = max(max_cov_used, a);
+    fclose(f);
 }
 
 void exe_engine(string command)
