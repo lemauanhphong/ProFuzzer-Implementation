@@ -1,0 +1,5 @@
+with open("input", "wb") as f:
+    f.write(b"\x02\x00\x10\x01\x01\x00\x07\x05")
+
+# import sys
+# sys.stdout.buffer.write(b"\x02\x00\x10\x01\x01\x00\x07\x05")
