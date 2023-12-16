@@ -20,9 +20,22 @@ int main() {
     for (int i = 0; i < n; ++i) printf("asd");
 
     memcpy(&n, buffer + 4, 2);
-    if (n == 1) printf("1\n");
-    if (n == 123) printf("123\n");
-    if (n == 45) printf("45\n");
+
+    switch (n)
+    {
+    case 1:
+        printf("1\n");
+        break;
+    case 123:
+        printf("123\n");
+        break;
+    case 45:
+        printf("45\n");
+        break;
+    default:
+        exit(0);
+    }
+
 
     memcpy(&n, buffer + 6, 2);
 

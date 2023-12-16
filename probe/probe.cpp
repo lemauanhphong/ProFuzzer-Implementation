@@ -215,6 +215,7 @@ void write_template(const vector<pair<int, int>> &fields, fs::path &template_pat
     ofstream f(out_file);
     for (const auto &field : fields)
         f << field.first << ' ' << field.second << '\n';
+    f.close();
 }
 
 void process(fs::path &seed_path, fs::path &template_path, fs::path &target_path)
@@ -250,14 +251,10 @@ void process(fs::path &seed_path, fs::path &template_path, fs::path &target_path
             seed[i] = j;
             ofstream f(filename);
             f.write(seed, len);
+            f.close();
         }
         
         exe_engine("afl-showmap -r -i tmp_in -o tmp_out " + target_path.string());        
-
-        if (i == 4)
-        {
-            int c = 4;
-        }
 
         fraction ma = {ULLONG_MAX, ULLONG_MAX}, mi = {ULLONG_MAX, ULLONG_MAX};
         for (int j = 0; j < 256; ++j)
