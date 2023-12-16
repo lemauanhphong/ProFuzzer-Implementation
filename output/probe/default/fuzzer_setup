@@ -1,9 +1,0 @@
-# environment variables:
-AFL_BENCH_UNTIL_CRASH=1
-AFL_CUSTOM_MUTATOR_LIBRARY=/home/paml/doanvuive/ProFuzzer-Implementation/probe/probe.so
-AFL_CUSTOM_MUTATOR_ONLY=1
-AFL_DEBUG=1
-AFL_KILL_SIGNAL=9
-AFL_NO_UI=1
-# command line:
-'afl-fuzz' '-i' 'seeds/' '-o' 'output/probe' './target/vuln'

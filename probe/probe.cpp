@@ -289,9 +289,6 @@ void process(fs::path &seed_path, fs::path &template_path, fs::path &target_path
 
         alpha_x2[i] = ma + mi;
 
-        cout << mi.x << ' ' << mi.y << endl;
-        // cout << ma.x << ' ' << ma.y << endl;
-
         if (fields.size() && last_mi == mi)
             fields.back().first += 1;
         else
