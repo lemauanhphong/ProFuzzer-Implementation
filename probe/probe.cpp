@@ -308,6 +308,13 @@ void cleanup()
     fs::remove_all("tmp_out");
 }
 
+void all(fs::path &seed_path, fs::path &template_path, fs::path &target_path)
+{
+    init();
+    process(seeds_path, template_path, target_path);
+    cleanup();
+}
+
 int main(int argc, char *argv[])
 {
     fs::path seeds_path = argv[1];
@@ -320,8 +327,6 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    init();
-    process(seeds_path, template_path, target_path);
-    cleanup();
+    all();
     return 0;
 }

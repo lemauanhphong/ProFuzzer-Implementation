@@ -62,7 +62,7 @@ my_mutator_t *afl_custom_init(afl_state_t *afl, unsigned int seed) {
   }
   data->cnt=0;
   data->A='A';
-  data->f=fopen("debug", "w+");
+  data->f=fopen("debug", "a");
   if ((data->mutated_out = (u8 *)malloc(MAX_FILE)) == NULL) {
 
     perror("afl_custom_init malloc");
