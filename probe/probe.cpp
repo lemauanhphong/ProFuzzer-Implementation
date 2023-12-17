@@ -1,5 +1,3 @@
-#pragma comment(linker, "/STACK:268435456");
-
 #include <bits/stdc++.h>
 #include <experimental/filesystem>
 
@@ -218,7 +216,7 @@ void write_template(const vector<pair<int, int>> &fields, fs::path &template_pat
     f.close();
 }
 
-void process(fs::path &seed_path, fs::path &template_path, fs::path &target_path)
+vector<std::pair<int, int>> process(fs::path &seed_path, fs::path &template_path, fs::path &target_path, bool write = 1)
 {
     uint8_t *base_cov = new uint8_t[LEN_MAP];
     uint8_t *cmp_cov = new uint8_t[LEN_MAP];
@@ -253,8 +251,8 @@ void process(fs::path &seed_path, fs::path &template_path, fs::path &target_path
             f.write(seed, len);
             f.close();
         }
-        
-        exe_engine("afl-showmap -r -i tmp_in -o tmp_out " + target_path.string());        
+
+        exe_engine("afl-showmap -r -i tmp_in -o tmp_out " + target_path.string());
 
         fraction ma = {ULLONG_MAX, ULLONG_MAX}, mi = {ULLONG_MAX, ULLONG_MAX};
         for (int j = 0; j < 256; ++j)
@@ -299,7 +297,10 @@ void process(fs::path &seed_path, fs::path &template_path, fs::path &target_path
     }
 
     type_field_identification(fields, FS, FD, alpha_x2, len);
-    write_template(fields, template_path);
+    if (write)
+        return write_template(fields, template_path), (vector<std::pair<int, int>>){};
+    else
+        return fields;
 }
 
 void cleanup()
@@ -308,25 +309,25 @@ void cleanup()
     fs::remove_all("tmp_out");
 }
 
-void all(fs::path &seed_path, fs::path &template_path, fs::path &target_path)
+void probe(fs::path &seed_path, fs::path &template_path, fs::path &target_path, bool write = 1)
 {
     init();
-    process(seeds_path, template_path, target_path);
+    process(seed_path, template_path, target_path);
     cleanup();
 }
 
 int main(int argc, char *argv[])
 {
-    fs::path seeds_path = argv[1];
+    fs::path seed_path = argv[1];
     fs::path template_path = argv[2];
     fs::path target_path = argv[3];
 
-    if (!fs::exists(seeds_path) || !fs::exists(template_path) || !fs::exists(target_path))
+    if (!fs::exists(seed_path) || !fs::exists(template_path) || !fs::exists(target_path))
     {
         perror("");
         exit(-1);
     }
 
-    all();
+    probe(seed_path, template_path, target_path);
     return 0;
 }
