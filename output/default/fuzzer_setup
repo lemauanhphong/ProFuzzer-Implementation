@@ -1,6 +1,7 @@
 # environment variables:
-AFL_CUSTOM_MUTATOR_LIBRARY=/home/paml/doanvuive/ProFuzzer-Implementation/mutator/exploitation.so
+AFL_CUSTOM_MUTATOR_LIBRARY=/home/paml/doanvuive/ProFuzzer-Implementation/mutator/exploration.so
 AFL_CUSTOM_MUTATOR_ONLY=1
+AFL_DISABLE_TRIM=1
 AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
 AFL_KILL_SIGNAL=9
 # command line:

@@ -79,7 +79,7 @@ void type_field_identification(vector<pair<int, int>> &fields, fraction FS[][256
     {
         r = l + field.first - 1;
         int type = -1;
-        bool assertion = 1, rawdata = 1, enumration = 0, loopcount = 0, offset = 0, size = 0;
+        bool assertion = 1, rawdata = 1, enumeration = 0, loopcount = 0, offset = 0, size = 0;
 
         // Assertion Field
         for (int i = l; i <= r && assertion; ++i)
@@ -115,16 +115,16 @@ void type_field_identification(vector<pair<int, int>> &fields, fraction FS[][256
         }
 
         // Enumeration Field
-        for (int i = l; i <= r && !enumration; ++i)
+        for (int i = l; i <= r && !enumeration; ++i)
         {
             int cnt_g = 0;
             for (int j = 0; j < 256; ++j)
                 cnt_g += alpha_x2[i] < fraction({FS[i][j].x << 1, FS[i][j].y});
             if (cnt_g > 1)
-                enumration = 1;
+                enumeration = 1;
         }
 
-        if (enumration)
+        if (enumeration)
         {
             type = 2;
             goto JMP;
@@ -196,13 +196,15 @@ void type_field_identification(vector<pair<int, int>> &fields, fraction FS[][256
             goto JMP;
         }
 
+        type = 6;
+
     JMP:
         l = r + 1;
         field.second = type;
     }
 }
 
-void write_template(const vector<pair<int, int>> &fields, fs::path &template_path)
+void write_template(const vector<pair<int, int>> &fields, const fs::path &template_path)
 {
     fs::path out_file = template_path;
     if (fs::is_directory(template_path))
@@ -216,7 +218,7 @@ void write_template(const vector<pair<int, int>> &fields, fs::path &template_pat
     f.close();
 }
 
-vector<std::pair<int, int>> process(fs::path &seed_path, fs::path &template_path, fs::path &target_path, bool write = 1)
+vector<std::pair<int, int>> process(const fs::path &seed_path, const fs::path &template_path, const fs::path &target_path, bool write = 1)
 {
     uint8_t *base_cov = new uint8_t[LEN_MAP];
     uint8_t *cmp_cov = new uint8_t[LEN_MAP];
@@ -297,10 +299,8 @@ vector<std::pair<int, int>> process(fs::path &seed_path, fs::path &template_path
     }
 
     type_field_identification(fields, FS, FD, alpha_x2, len);
-    if (write)
-        return write_template(fields, template_path), (vector<std::pair<int, int>>){};
-    else
-        return fields;
+    if (write) write_template(fields, template_path);
+    return fields;
 }
 
 void cleanup()
@@ -309,25 +309,26 @@ void cleanup()
     fs::remove_all("tmp_out");
 }
 
-void probe(fs::path &seed_path, fs::path &template_path, fs::path &target_path, bool write = 1)
+vector<std::pair<int, int>> probe(const fs::path &seed_path, const fs::path &template_path, const fs::path &target_path, bool write = 1)
 {
     init();
-    process(seed_path, template_path, target_path);
+    auto ret = process(seed_path, template_path, target_path, write);
     cleanup();
+    return ret;
 }
 
-int main(int argc, char *argv[])
-{
-    fs::path seed_path = argv[1];
-    fs::path template_path = argv[2];
-    fs::path target_path = argv[3];
+// int main(int argc, char *argv[])
+// {
+//     fs::path seed_path = argv[1];
+//     fs::path template_path = argv[2];
+//     fs::path target_path = argv[3];
 
-    if (!fs::exists(seed_path) || !fs::exists(template_path) || !fs::exists(target_path))
-    {
-        perror("");
-        exit(-1);
-    }
+//     if (!fs::exists(seed_path) || !fs::exists(target_path))
+//     {
+//         perror("");
+//         exit(-1);
+//     }
 
-    probe(seed_path, template_path, target_path);
-    return 0;
-}
+//     probe(seed_path, template_path, target_path);
+//     return 0;
+// }

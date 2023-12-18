@@ -4,4 +4,4 @@
 using namespace std;
 namespace fs = experimental::filesystem;
 
-void all(fs::path &seed_path, fs::path &template_path, fs::path &target_path, bool write = 1);
+vector<std::pair<int, int>> probe(const fs::path &seed_path, const fs::path &template_path, const fs::path &target_path, bool write = 1);
