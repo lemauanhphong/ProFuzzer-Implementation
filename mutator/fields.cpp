@@ -1,77 +1,39 @@
-#include <bits/stdc++.h>
+#include "fields.h"
 
-using namespace std;
-
-class Field
+Field::Field(int l, int r, int type)
 {
-private:
-    int l, r, type;
-
-public:
-    Field(int l, int r, int type)
-    {
-        this->l = l;
-        this->r = r;
-        this->type = type;
-    };
+    this->l = l;
+    this->r = r;
+    this->type = type;
 };
 
-class Assertion : public Field
+int Field::getL() { return l; }
+int Field::getR() { return r; }
+int Field::getType() { return type; }
+
+Assertion::Assertion(int l, int r, map<int, vector<string>> *constant) : Field(l, r, 0)
 {
-private:
-    map<int, vector<char *>> *constant;
+    constant = constant;
+}
 
-public:
-    Assertion(int l, int r, int type, map<int, vector<char *>> *constant) : Field(l, r, type)
-    {
-        constant = constant;
-    }
-};
+Rawdata::Rawdata(int l, int r) : Field(l, r, 1) {}
 
-class Enumeration : public Field
+Enumeration::Enumeration(int l, int r, map<int, vector<string>> *constant) : Field(l, r, 2)
 {
-private:
-    map<int, vector<char *>> *constant;
+    constant = constant;
+}
 
-public:
-    Enumeration(int l, int r, int type, map<int, vector<char *>> *constant) : Field(l, r, type)
-    {
-        constant = constant;
-    }
-};
-
-class Loopcount : public Field
+Loopcount::Loopcount(int l, int r, int le, int ri) : Field(l, r, 3)
 {
-private:
-    pair<int, int> r;
+    this->r = {le, ri};
+}
 
-public:
-    Loopcount(int l, int r, int type, int le, int ri) : Field(l, r, type)
-    {
-        this->r = {le, ri};
-    }
-};
-
-class Offset : public Field
+Offset::Offset(int l, int r, int v) : Field(l, r, 4)
 {
-private:
-    int v;
+    this->v = v;
+}
 
-public:
-    Offset(int l, int r, int type, int v) : Field(l, r, type)
-    {
-        this->v = v;
-    }
-};
-
-class Size : public Field
+Size::Size(int l, int r, int v) : Field(l, r, 5)
 {
-private:
-    int v;
-
-public:
-    Size(int l, int r, int type, int v) : Field(l, r, type)
-    {
-        this->v = v;
-    }
-};
+    this->v = v;
+}

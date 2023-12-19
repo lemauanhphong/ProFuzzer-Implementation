@@ -6,21 +6,23 @@
              Dominik Maier <mail@dmnk.co>
 */
 
-// You need to use -I/path/to/AFLplusplus/include -I.
-#include "AFLplusplus/afl-fuzz.h"
-#include "probe/probe.h"
-
 #include <bits/stdc++.h>
 #include <experimental/filesystem>
 
 using namespace std;
 namespace fs = experimental::filesystem;
 
+// You need to use -I/path/to/AFLplusplus/include -I.
+#include "afl-fuzz.h"
+#include "probe.h"
+#include "fields.h"
+
 const string MUTATION_NAME = "exploration";
 const int DATA_SIZE = 100;
 const float HIGH_PROB = 0.9;
 const int FRUITLESS = 11;
-enum FIELD {
+enum FIELD
+{
     ASSERTION,
     RAWDATA,
     ENUMERATION,
@@ -33,14 +35,111 @@ enum FIELD {
 typedef struct my_mutator
 {
     afl_state_t *afl;
-    vector<pair<pair<int, int>, int>> fields;
+    vector<Field> fields;
     bool init_probe;
     u8 *mutated_out;
     u8 fruitless;
     // vector <string> str_constants = {};
     // vector <int> int_constants = {1, 45, 123};
-    map<int, vector<char *>> ex_constants;
+    map<int, vector<string>> ex_constants;
+    int mutated_i;
 } my_mutator_t;
+
+// =============================
+// This is functions from afl++
+#if __GNUC__ < 6
+#ifndef likely
+#define likely(_x) (_x)
+#endif
+#ifndef unlikely
+#define unlikely(_x) (_x)
+#endif
+#else
+#ifndef likely
+#define likely(_x) __builtin_expect(!!(_x), 1)
+#endif
+#ifndef unlikely
+#define unlikely(_x) __builtin_expect(!!(_x), 0)
+#endif
+#endif
+
+/* Updates the virgin bits, then reflects whether a new count or a new tuple is
+ * seen in ret. */
+inline void discover_word(u8 *ret, u64 *current, u64 *virgin)
+{
+
+    /* Optimize for (*current & *virgin) == 0 - i.e., no bits in current bitmap
+       that have not been already cleared from the virgin map - since this will
+       almost always be the case. */
+
+    if (*current & *virgin)
+    {
+
+        if (likely(*ret < 2))
+        {
+
+            u8 *cur = (u8 *)current;
+            u8 *vir = (u8 *)virgin;
+
+            /* Looks like we have not found any new bytes yet; see if any non-zero
+               bytes in current[] are pristine in virgin[]. */
+
+            if ((cur[0] && vir[0] == 0xff) || (cur[1] && vir[1] == 0xff) || (cur[2] && vir[2] == 0xff) ||
+                (cur[3] && vir[3] == 0xff) || (cur[4] && vir[4] == 0xff) || (cur[5] && vir[5] == 0xff) ||
+                (cur[6] && vir[6] == 0xff) || (cur[7] && vir[7] == 0xff))
+                *ret = 2;
+            else
+                *ret = 1;
+        }
+
+        *virgin &= ~*current;
+    }
+}
+
+/* Check if the current execution path brings anything new to the table.
+   Update virgin bits to reflect the finds. Returns 1 if the only change is
+   the hit-count for a particular tuple; 2 if there are new tuples seen.
+   Updates the map, so subsequent calls will always return 0.
+
+   This function is called after every exec() on a fairly large buffer, so
+   it needs to be fast. We do this in 32-bit and 64-bit flavors. */
+
+inline u8 has_new_bits(afl_state_t *afl, u8 *virgin_map)
+{
+
+#ifdef WORD_SIZE_64
+
+    u64 *current = (u64 *)afl->fsrv.trace_bits;
+    u64 *virgin = (u64 *)virgin_map;
+
+    u32 i = ((afl->fsrv.real_map_size + 7) >> 3);
+
+#else
+
+    u32 *current = (u32 *)afl->fsrv.trace_bits;
+    u32 *virgin = (u32 *)virgin_map;
+
+    u32 i = ((afl->fsrv.real_map_size + 3) >> 2);
+
+#endif /* ^WORD_SIZE_64 */
+
+    u8 ret = 0;
+    while (i--)
+    {
+
+        if (unlikely(*current))
+            discover_word(&ret, current, virgin);
+
+        current++;
+        virgin++;
+    }
+
+    if (unlikely(ret) && likely(virgin_map == afl->virgin_bits))
+        afl->bitmap_changed = 1;
+
+    return ret;
+}
+// =============================
 
 int rd(int l, int r)
 {
@@ -65,7 +164,6 @@ float rd()
  */
 extern "C" my_mutator_t *afl_custom_init(afl_state_t *afl, unsigned int seed)
 {
-
     srand(seed); // needed also by surgical_havoc_mutate()
 
     my_mutator_t *data = (my_mutator_t *)calloc(1, sizeof(my_mutator_t));
@@ -76,10 +174,12 @@ extern "C" my_mutator_t *afl_custom_init(afl_state_t *afl, unsigned int seed)
         return NULL;
     }
 
+    data->mutated_i = 0;
     data->fruitless = FRUITLESS;
     data->init_probe = 0;
-    data->ex_constants[2] = {"\1", "\45", "\123"};
-
+    cout << "123\n";
+    data->ex_constants[2] = {string("\x01"), string("\x2d"), string("\x7b")};
+    cout << "123\n";
     if ((data->mutated_out = (u8 *)malloc(MAX_FILE)) == NULL)
     {
 
@@ -125,46 +225,86 @@ extern "C" size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_s
         auto fields = probe(MUTATION_NAME + "_seed", MUTATION_NAME + "_template", getenv("TARGET"), 0);
         int l = 0;
         for (auto &field : fields)
-            data->fields.push_back({{l, l + field.first - 1}, field.second}), l += field.first;
-        for (auto &field : data->fields)
-            cout << field.first.first << ' ' << field.first.second << ' ' << field.second << '\n';
+        {
+            if (field.second == 0)
+                data->fields.push_back(Assertion(l, l + field.first - 1, &(data->ex_constants)));
+            else if (field.second == 1)
+                data->fields.push_back(Rawdata(l, l + field.first - 1));
+            else if (field.second == 2)
+                data->fields.push_back(Assertion(l, l + field.first - 1, &(data->ex_constants)));
+            else if (field.second == 3)
+                data->fields.push_back(Loopcount(l, l + field.first - 1, 0, (1 << 16) - 1));
+            else if (field.second == 4)
+                data->fields.push_back(Offset(l, l + field.first - 1, -1));
+            else if (field.second == 5)
+                data->fields.push_back(Size(l, l + field.first - 1, -1));
+            else
+                data->fields.push_back(Field(l, l + field.first - 1, 6));
+
+            l += field.first;
+        }
+
         fs::remove(MUTATION_NAME + "_seed");
     }
 
-    if (!has_new_bits(data->afl, data->afl->virgin_bits)) --data->fruitless;
-    else data->fruitless = FRUITLESS;
-    
+    if (!has_new_bits(data->afl, data->afl->virgin_bits))
+        --data->fruitless;
+    else
+        data->fruitless = FRUITLESS;
+
+    int mutated_i;
+    int type = data->fields[mutated_i].getType();
+    int len = data->fields[mutated_i].getR() - data->fields[mutated_i].getL() + 1;
     if (!data->fruitless)
     {
-
-        int mutated_i;
-        while (1)
+        for (int i = 0; i < data->fields.size(); ++i)
         {
-            mutated_i = rd(0, data->fields.size() - 1);
-            if (data->fields[mutated_i].second != RAWDATA)
+            mutated_i = (mutated_i + 1) % data->fields.size();
+            if (data->fields[mutated_i].getType() != RAWDATA)
                 break;
         }
 
-        int type = data->fields[mutated_i].second;
-        int len = data->fields[mutated_i].first.second - data->fields[mutated_i].first.first + 1;
-        if (type == ASSERTION)
+        data->mutated_i = mutated_i;
+        data->fruitless = FRUITLESS;
+
+        if (type == ASSERTION) // this is just another bad replacement, ProFuzzer does not do that :)
         {
             if (rd() > HIGH_PROB && data->ex_constants[len].size() > 0)
             {
-                memcpy(data->mutated_out + data->fields[mutated_i].first.first, data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)], len);
+                memcpy(data->mutated_out + data->fields[mutated_i].getL(), data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)].c_str(), len);
             }
         }
-        else if (type == ENUMERATION)  // this is just another bad replacement, ProFuzzer does not do that :)
+        else if (type == ENUMERATION) // this is just another bad replacement, ProFuzzer does not do that :)
         {
             if (rd() < HIGH_PROB && data->ex_constants[len].size() > 0)
             {
-                memcpy(data->mutated_out + data->fields[mutated_i].first.first, data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)], len);
+                memcpy(data->mutated_out + data->fields[mutated_i].getL(), data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)].c_str(), len);
             }
             else
             {
-                memcpy(data->mutated_out + data->fields[mutated_i].first.first, data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)], len);
+                memcpy(data->mutated_out + data->fields[mutated_i].getL(), data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)].c_str(), len);
             }
         }
+        else if (type == LOOPCOUNT)
+        {
+            // do something
+        }
+        else if (type == OFFSET)
+        {
+            // do something
+        }
+        else if (type == SIZE)
+        {
+            // do something
+        }
+        else
+        {
+            // fallback to default AFL random per-byte mutation
+        }
+    }
+    else
+    {
+        // exploitation mutation
     }
 
     *out_buf = data->mutated_out;

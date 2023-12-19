@@ -11,6 +11,8 @@
         "bitset": "cpp",
         "fstream": "cpp",
         "span": "cpp",
-        "map": "cpp"
+        "map": "cpp",
+        "sstream": "cpp",
+        "regex": "cpp"
     }
 }
