@@ -17,7 +17,10 @@ using namespace std;
 namespace fs = experimental::filesystem;
 
 const string MUTATION_NAME = "exploration";
-const enum FIELD {
+const int DATA_SIZE = 100;
+const float HIGH_PROB = 0.9;
+const int FRUITLESS = 11;
+enum FIELD {
     ASSERTION,
     RAWDATA,
     ENUMERATION,
@@ -33,11 +36,20 @@ typedef struct my_mutator
     vector<pair<pair<int, int>, int>> fields;
     bool init_probe;
     u8 *mutated_out;
+    u8 fruitless;
+    // vector <string> str_constants = {};
+    // vector <int> int_constants = {1, 45, 123};
+    map<int, vector<char *>> ex_constants;
 } my_mutator_t;
 
 int rd(int l, int r)
 {
     return rand() % (r - l + 1) + l;
+}
+
+float rd()
+{
+    return (float)rand() / RAND_MAX;
 }
 
 /**
@@ -64,7 +76,9 @@ extern "C" my_mutator_t *afl_custom_init(afl_state_t *afl, unsigned int seed)
         return NULL;
     }
 
+    data->fruitless = FRUITLESS;
     data->init_probe = 0;
+    data->ex_constants[2] = {"\1", "\45", "\123"};
 
     if ((data->mutated_out = (u8 *)malloc(MAX_FILE)) == NULL)
     {
@@ -99,6 +113,9 @@ extern "C" size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_s
                                   size_t add_buf_size, // add_buf can be NULL
                                   size_t max_size)
 {
+    size_t mutated_size = DATA_SIZE <= max_size ? DATA_SIZE : max_size;
+    memcpy(data->mutated_out, buf, buf_size);
+
     if (!data->init_probe)
     {
         data->init_probe = 1;
@@ -114,22 +131,44 @@ extern "C" size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_s
         fs::remove(MUTATION_NAME + "_seed");
     }
 
-    int mutated_i;
-    while (1)
+    if (!has_new_bits(data->afl, data->afl->virgin_bits)) --data->fruitless;
+    else data->fruitless = FRUITLESS;
+    
+    if (!data->fruitless)
     {
-        mutated_i = rd(0, data->fields.size() - 1);
-        if (data->fields[mutated_i].second != RAWDATA)
-            break;
+
+        int mutated_i;
+        while (1)
+        {
+            mutated_i = rd(0, data->fields.size() - 1);
+            if (data->fields[mutated_i].second != RAWDATA)
+                break;
+        }
+
+        int type = data->fields[mutated_i].second;
+        int len = data->fields[mutated_i].first.second - data->fields[mutated_i].first.first + 1;
+        if (type == ASSERTION)
+        {
+            if (rd() > HIGH_PROB && data->ex_constants[len].size() > 0)
+            {
+                memcpy(data->mutated_out + data->fields[mutated_i].first.first, data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)], len);
+            }
+        }
+        else if (type == ENUMERATION)  // this is just another bad replacement, ProFuzzer does not do that :)
+        {
+            if (rd() < HIGH_PROB && data->ex_constants[len].size() > 0)
+            {
+                memcpy(data->mutated_out + data->fields[mutated_i].first.first, data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)], len);
+            }
+            else
+            {
+                memcpy(data->mutated_out + data->fields[mutated_i].first.first, data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)], len);
+            }
+        }
     }
 
-    int type = data->fields[mutated_i].second;
-
-    if (type == ASSERTION)
-    {
-        
-    }
-
-    return buf_size;
+    *out_buf = data->mutated_out;
+    return mutated_size;
 }
 
 /**

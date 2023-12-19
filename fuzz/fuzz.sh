@@ -1,6 +1,5 @@
 export AFL_CUSTOM_MUTATOR_ONLY=1
-export AFL_CUSTOM_MUTATOR_LIBRARY="/home/paml/doanvuive/ProFuzzer-Implementation/mutator/exploration.so"
-export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
+export AFL_CUSTOM_MUTATOR_LIBRARY="/src/mutator/exploration.so"
 export AFL_DISABLE_TRIM=1
 export IGNORE_EXE_STDOUT=1
 export TARGET="../target/vuln"
