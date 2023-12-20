@@ -1,0 +1,5 @@
+../target/openjpeg-2.3.0/build/bin/opj_compress
+-i
+@@
+-o
+/tmp/image.j2k
