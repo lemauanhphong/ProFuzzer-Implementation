@@ -8,6 +8,6 @@ g++ -shared -Wall -O3 -fPIC -I/src/mutator/include/probe -I/AFLplusplus/include 
 # g++ -shared -Wall -O3 ../mutator/exploitation.cpp -o ../mutator/exploitation.so
 # gcc -shared -Wall -O3 ../mutator/exploration.c -o ../mutator/exploration.so
 # gcc -shared -Wall -O3 ../mutator/exploitation.c -o ../mutator/exploitation.so
-afl-fuzz -i ../seeds/ -o ../output ../target/vuln
+afl-fuzz -i ../fuzzgoat/in -o ../fuzzgoat/out ../fuzzgoat/fuzzgoat @@
 
 

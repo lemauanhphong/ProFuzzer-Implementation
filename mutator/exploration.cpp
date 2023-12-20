@@ -36,11 +36,12 @@ typedef struct my_mutator
 {
     afl_state_t *afl;
     vector<Field> fields;
+    // int bs_l;
+    // int bs_r;
+    // int bs_m;
     bool init_probe;
     u8 *mutated_out;
     u8 fruitless;
-    // vector <string> str_constants = {};
-    // vector <int> int_constants = {1, 45, 123};
     map<int, vector<string>> ex_constants;
     int mutated_i;
 } my_mutator_t;
@@ -106,7 +107,7 @@ inline void discover_word(u8 *ret, u64 *current, u64 *virgin)
 
 inline u8 has_new_bits(afl_state_t *afl, u8 *virgin_map)
 {
-
+    // cout << "go"  << endl;
 #ifdef WORD_SIZE_64
 
     u64 *current = (u64 *)afl->fsrv.trace_bits;
@@ -166,7 +167,7 @@ extern "C" my_mutator_t *afl_custom_init(afl_state_t *afl, unsigned int seed)
 {
     srand(seed); // needed also by surgical_havoc_mutate()
 
-    my_mutator_t *data = (my_mutator_t *)calloc(1, sizeof(my_mutator_t));
+    my_mutator_t *data = new my_mutator_t;
     if (!data)
     {
 
@@ -174,15 +175,15 @@ extern "C" my_mutator_t *afl_custom_init(afl_state_t *afl, unsigned int seed)
         return NULL;
     }
 
+    // data->bs_l = 0;
+    // data->bs_r = -1;
+    // data->bs_m = -1;
     data->mutated_i = 0;
     data->fruitless = FRUITLESS;
     data->init_probe = 0;
-    cout << "123\n";
-    data->ex_constants[2] = {string("\x01"), string("\x2d"), string("\x7b")};
-    cout << "123\n";
-    if ((data->mutated_out = (u8 *)malloc(MAX_FILE)) == NULL)
+    data->ex_constants[2] = {"\x01", "\x2d", "\x7b", "\x02"};
+    if ((data->mutated_out = (u8 *)calloc(MAX_FILE, sizeof(u8))) == NULL)
     {
-
         perror("afl_custom_init malloc");
         return NULL;
     }
@@ -216,11 +217,18 @@ extern "C" size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_s
     size_t mutated_size = DATA_SIZE <= max_size ? DATA_SIZE : max_size;
     memcpy(data->mutated_out, buf, buf_size);
 
+    // if (data->bs_l <= data->bs_r)
+    // {
+    //     data->bs_m = data->bs_l + (data->bs_r - data->bs_l) / 2;
+    //     *out_buf = data->mutated_out;
+    //     return mutated_size;
+    // }
+
     if (!data->init_probe)
     {
         data->init_probe = 1;
         ofstream ofs(MUTATION_NAME + "_seed");
-        ofs.write((char *)buf, buf_size);
+        ofs.write((char *)data->mutated_out, buf_size);
         ofs.close();
         auto fields = probe(MUTATION_NAME + "_seed", MUTATION_NAME + "_template", getenv("TARGET"), 0);
         int l = 0;
@@ -235,9 +243,17 @@ extern "C" size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_s
             else if (field.second == 3)
                 data->fields.push_back(Loopcount(l, l + field.first - 1, 0, (1 << 16) - 1));
             else if (field.second == 4)
-                data->fields.push_back(Offset(l, l + field.first - 1, -1));
+            {
+                size_t val;
+                memcpy(&val, data->mutated_out + l, max(field.first, 4));
+                data->fields.push_back(Offset(l, l + field.first - 1, val));
+            }
             else if (field.second == 5)
-                data->fields.push_back(Size(l, l + field.first - 1, -1));
+            {
+                size_t val;
+                memcpy(&val, data->mutated_out + l, max(field.first, 4));
+                data->fields.push_back(Size(l, l + field.first - 1, val));
+            }
             else
                 data->fields.push_back(Field(l, l + field.first - 1, 6));
 
@@ -246,21 +262,24 @@ extern "C" size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_s
 
         fs::remove(MUTATION_NAME + "_seed");
     }
-
+    // cout << "probed" << endl;
     if (!has_new_bits(data->afl, data->afl->virgin_bits))
         --data->fruitless;
-    else
-        data->fruitless = FRUITLESS;
+    // cout << "probed" << endl;
 
     int mutated_i;
-    int type = data->fields[mutated_i].getType();
-    int len = data->fields[mutated_i].getR() - data->fields[mutated_i].getL() + 1;
+    Field *field = &data->fields[mutated_i];
+    int type = field->getType();
+    int len = field->getR() - field->getL() + 1;
+    // cout << "check" << endl;
     if (!data->fruitless)
     {
+        data->fruitless = FRUITLESS;
+        // cout << "explore" << endl;
         for (int i = 0; i < data->fields.size(); ++i)
         {
             mutated_i = (mutated_i + 1) % data->fields.size();
-            if (data->fields[mutated_i].getType() != RAWDATA)
+            if (field->getType() != RAWDATA)
                 break;
         }
 
@@ -271,30 +290,50 @@ extern "C" size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_s
         {
             if (rd() > HIGH_PROB && data->ex_constants[len].size() > 0)
             {
-                memcpy(data->mutated_out + data->fields[mutated_i].getL(), data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)].c_str(), len);
+                memcpy(data->mutated_out + field->getL(), data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)].c_str(), len);
             }
         }
         else if (type == ENUMERATION) // this is just another bad replacement, ProFuzzer does not do that :)
         {
-            if (rd() < HIGH_PROB && data->ex_constants[len].size() > 0)
+            if (rd() < HIGH_PROB)
             {
-                memcpy(data->mutated_out + data->fields[mutated_i].getL(), data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)].c_str(), len);
+                // mutate with one of its valid values
             }
             else
             {
-                memcpy(data->mutated_out + data->fields[mutated_i].getL(), data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)].c_str(), len);
+                memcpy(data->mutated_out + field->getL(), data->ex_constants[len][rd(0, data->ex_constants[len].size() - 1)].c_str(), len);
             }
         }
         else if (type == LOOPCOUNT)
         {
-            // do something
+            // binary search somehow
+            // data->bs_l = 0;
+            // data->bs_m = UINT_MAX;
         }
         else if (type == OFFSET)
         {
+            size_t val = 0;
+            int truncated_len = max(len, 4);
+            char t[truncated_len];
+            for (int i = 0; i < truncated_len; ++i)
+                t[i] = rd(0, 255);
+            memmove(data->mutated_out + field->getL() + truncated_len, data->mutated_out + field->getL(), truncated_len);
+            memcpy(data->mutated_out + field->getL(), t, truncated_len);
+            memcpy(&val, t, truncated_len);
+            dynamic_cast<Offset *>(field)->setV(val);
             // do something
         }
         else if (type == SIZE)
         {
+            size_t val = 0;
+            int truncated_len = min(field->getL() + 1, max(len, 4));
+            char t[truncated_len];
+            for (int i = 0; i < truncated_len; ++i)
+                t[i] = rd(0, 255);
+            memmove(data->mutated_out + field->getL() - truncated_len, data->mutated_out + field->getL(), truncated_len);
+            memcpy(data->mutated_out + field->getL() - truncated_len, t, truncated_len);
+            memcpy(&val, t, truncated_len);
+            dynamic_cast<Size *>(field)->setV(val);
             // do something
         }
         else
@@ -304,12 +343,115 @@ extern "C" size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_s
     }
     else
     {
+        // cout << "exploit" << " " << type << endl;
         // exploitation mutation
+        string replacement = "";
+        if (type == ASSERTION)
+        {
+            // do something
+        }
+        else if (type == ENUMERATION)
+        {
+            // do something
+        }
+        else if (type == OFFSET)
+        {
+            int t = rd(1, 7);
+            if (t <= 2)
+            {
+                replacement = Field::OffsetField[rd(0, 1)];
+            }
+            else if (t == 3)
+            {
+                // so something
+            }
+            else if (t == 4)
+            {
+                // so something
+            }
+            else if (t == 5)
+            {
+                // do something
+            }
+            else if (t == 6)
+            {
+                // so something
+            }
+            else if (t == 7)
+            {
+                replacement = Field::BoundaryValue[rd(0, Field::BoundaryValue.size() - 1)];
+            }
+        }
+        else if (type == SIZE)
+        {
+            int t = rd(1, 6);
+            if (t <= 2)
+            {
+                replacement = Field::SizeField[rd(0, 1)];
+            }
+            else if (t <= 4)
+            {
+                replacement = Field::RawDataField[rd(0, 1)];
+            }
+            else if (t == 5)
+            {
+                // do something
+            }
+            else
+            {
+                replacement = Field::BoundaryValue[rd(0, Field::BoundaryValue.size() - 1)];
+            }
+        }
+        else if (type == LOOPCOUNT)
+        {
+            int t = rd(1, 4);
+            if (t == 0)
+            {
+                replacement = Field::SizeField[0];
+            }
+            else if (t == 1)
+            {
+                replacement = Field::OffsetField[0];
+            }
+            else if (t == 2)
+            {
+                replacement = Field::RawDataField[0];
+            }
+            else
+            {
+                replacement = Field::BoundaryValue[rd(0, Field::BoundaryValue.size() - 1)];
+            }
+        }
+        else
+        {
+            // do something
+        }
+
+        while (replacement.size() < len) replacement += rd(0, 255);
+        if (replacement.size() > len) replacement = replacement.substr(0, len);
+
+        memcpy(data->mutated_out + field->getL(), replacement.c_str(), len);
     }
 
     *out_buf = data->mutated_out;
     return mutated_size;
 }
+
+/**
+ * This method can be used if you want to run some code or scripts each time
+ * AFL++ executes the target with afl-fuzz.
+ *
+ * (Optional)
+ *
+ * @param data pointer returned in afl_custom_init by this custom mutator
+ */
+// extern "C" void afl_custom_post_run(my_mutator_t *data)
+// {
+//     if (has_new_bits(data->afl, data->afl->virgin_bits))
+//     {
+
+//     }
+// }
 
 /**
  * Deinitialize everything

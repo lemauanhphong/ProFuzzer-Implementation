@@ -5,13 +5,21 @@ using namespace std;
 class Field
 {
 private:
-    int l, r, type;
+    int l,
+        r,
+        type;
 
 public:
     Field(int l, int r, int type);
+    virtual ~Field();
     int getL();
     int getR();
     int getType();
+
+    static vector<string> SizeField;
+    static vector<string> RawDataField;
+    static vector<string> OffsetField;
+    static vector<string> BoundaryValue;
 };
 
 class Assertion : public Field
@@ -50,17 +58,19 @@ public:
 class Offset : public Field
 {
 private:
-    int v;
+    size_t v;
 
 public:
-    Offset(int l, int r, int v);
+    Offset(int l, int r, size_t v);
+    void setV(size_t v);
 };
 
 class Size : public Field
 {
 private:
-    int v;
+    size_t v;
 
 public:
-    Size(int l, int r, int v);
+    Size(int l, int r, size_t v);
+    void setV(size_t v);
 };
