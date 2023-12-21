@@ -52,7 +52,7 @@ LIBTOOL_DEPS = $(top_srcdir)/././config//ltmain.sh
 
 # **********************************************************************
 # C++ Compiler and precompiler
-CXX = g++
+CXX = afl-c++
 GXX = yes
 
 # Common compiler flags (warnings, symbols [-ggdb], optimization [-O2], etc)
@@ -62,10 +62,10 @@ ifeq ($(GXX),yes)
 endif
 
 # Command to run only the preprocessor
-CXXCPP = g++ -E
+CXXCPP = afl-c++ -E
 
 # Preprocessor flags
-CPPFLAGS = -I../src -I../include/ -I../include/exiv2  -std=c++98 -DEXV_LOCALEDIR=\"$(localedir)\"
+CPPFLAGS = -I../src -I../include/ -I../include/exiv2  -std=c++98 -std=gnu++98 -DEXV_LOCALEDIR=\"$(localedir)\"
 ifeq ($(COMMERCIAL_VERSION),yes)
 	CPPFLAGS += -DEXV_COMMERCIAL_VERSION=1
 endif
@@ -79,7 +79,7 @@ EXEEXT :=
 
 # **********************************************************************
 # C Compiler
-CC = gcc
+CC = afl-cc
 GCC = yes
 
 CFLAGS = -O2

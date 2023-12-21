@@ -1,14 +1,16 @@
 XMPMeta-GetSet.o: XMPMeta-GetSet.cpp ../include/XMP_Environment.h \
- XMPCore_Impl.hpp ../include/XMP_Const.h ../include/XMP_Environment.h \
- XMP_BuildInfo.h ../include/client-glue/WXMPMeta.hpp \
- ../include/client-glue/WXMP_Common.hpp XMPMeta.hpp XMLParserAdapter.hpp \
- XMPIterator.hpp XMPUtils.hpp ../include/client-glue/WXMPUtils.hpp \
- ../include/XMP_Version.h UnicodeInlines.incl_cpp UnicodeConversions.hpp \
- ExpatAdapter.hpp
+  ../src/XMPCore_Impl.hpp ../include/XMP_Const.h ../src/XMP_BuildInfo.h \
+  ../include/client-glue/WXMPMeta.hpp \
+  ../include/client-glue/WXMP_Common.hpp ../src/XMPMeta.hpp \
+  ../src/XMLParserAdapter.hpp ../src/XMPIterator.hpp ../src/XMPUtils.hpp \
+  ../include/client-glue/WXMPUtils.hpp ../include/XMP_Version.h \
+  ../src/UnicodeInlines.incl_cpp ../src/UnicodeConversions.hpp \
+  ../src/ExpatAdapter.hpp
 XMPMeta-GetSet.cpp ../include/XMP_Environment.h :
- XMPCore_Impl.hpp ../include/XMP_Const.h ../include/XMP_Environment.h :
- XMP_BuildInfo.h ../include/client-glue/WXMPMeta.hpp :
- ../include/client-glue/WXMP_Common.hpp XMPMeta.hpp XMLParserAdapter.hpp :
- XMPIterator.hpp XMPUtils.hpp ../include/client-glue/WXMPUtils.hpp :
- ../include/XMP_Version.h UnicodeInlines.incl_cpp UnicodeConversions.hpp :
- ExpatAdapter.hpp :
+  ../src/XMPCore_Impl.hpp ../include/XMP_Const.h ../src/XMP_BuildInfo.h :
+  ../include/client-glue/WXMPMeta.hpp :
+  ../include/client-glue/WXMP_Common.hpp ../src/XMPMeta.hpp :
+  ../src/XMLParserAdapter.hpp ../src/XMPIterator.hpp ../src/XMPUtils.hpp :
+  ../include/client-glue/WXMPUtils.hpp ../include/XMP_Version.h :
+  ../src/UnicodeInlines.incl_cpp ../src/UnicodeConversions.hpp :
+  ../src/ExpatAdapter.hpp :

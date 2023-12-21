@@ -148,7 +148,7 @@
 #define WANT_VISIBILITY_SUPPORT 1
 
 /* Define if we have / are building a shared library (DLL) */
-#define HAVE_DLL 1
+/* #undef HAVE_DLL */
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "ahuggel@gmx.net"

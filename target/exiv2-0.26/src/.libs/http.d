@@ -1,6 +1,0 @@
-.libs/http.o: http.cpp ../include/exiv2/config.h \
- ../include/exiv2/exv_conf.h ../include/exiv2/datasets.hpp \
- ../include/exiv2/types.hpp ../include/exiv2/version.hpp \
- ../include/exiv2/metadatum.hpp ../include/exiv2/value.hpp \
- ../include/exiv2/http.hpp ../include/exiv2/datasets.hpp \
- ../include/exiv2/futils.hpp
