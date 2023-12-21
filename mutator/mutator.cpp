@@ -17,7 +17,7 @@ namespace fs = experimental::filesystem;
 #include "probe.h"
 #include "fields.h"
 
-const string MUTATION_NAME = "exploration";
+const string MUTATION_NAME = "mutator";
 const int DATA_SIZE = 100;
 const float HIGH_PROB = 0.9;
 const int FRUITLESS = 11;
@@ -230,7 +230,7 @@ extern "C" size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_s
         ofstream ofs(MUTATION_NAME + "_seed");
         ofs.write((char *)data->mutated_out, buf_size);
         ofs.close();
-        auto fields = probe(MUTATION_NAME + "_seed", MUTATION_NAME + "_template", getenv("TARGET"), 0);
+        auto fields = probe(MUTATION_NAME + "_seed", MUTATION_NAME + "_template", getenv("TARGET"), 1);
         int l = 0;
         for (auto &field : fields)
         {

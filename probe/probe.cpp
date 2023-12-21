@@ -57,10 +57,14 @@ void init()
 
 void parse_map_file(string filepath, uint8_t *cov)
 {
+    // cout << "parse " << filepath  << endl;
     FILE *f = fopen(filepath.c_str(), "r");
     int a, b;
     while (fscanf(f, "%u:%u", &a, &b) != -1)
+    {
+        // cout << a << ' ' << b << endl;
         cov[a] = b, max_cov_used = max(max_cov_used, a);
+    }
     fclose(f);
 }
 
@@ -74,6 +78,7 @@ void exe_engine(string command)
 
 void type_field_identification(vector<pair<int, int>> &fields, fraction FS[][256], fraction FD[][256], fraction *alpha_x2, size_t &len)
 {
+    // cout << "[*] type_field_identification" << endl;
     int l = 0, r = 0;
     for (auto &field : fields)
     {
@@ -220,6 +225,7 @@ void write_template(const vector<pair<int, int>> &fields, const fs::path &templa
 
 vector<std::pair<int, int>> process(const fs::path &seed_path, const fs::path &template_path, const fs::path &target_path, bool write = 1)
 {
+    // cout << "[*] probing" << endl;
     uint8_t *base_cov = new uint8_t[LEN_MAP];
     uint8_t *cmp_cov = new uint8_t[LEN_MAP];
     char *seed = new char[MAX_FILE];
@@ -229,20 +235,27 @@ vector<std::pair<int, int>> process(const fs::path &seed_path, const fs::path &t
     string seedname = seed_path.stem().string();
     string seedfile = "tmp_in/" + seedname;
     fs::copy(seed_path, "tmp_in", fs::copy_options::update_existing);
+    // cout << "hehe" << endl;
     exe_engine("afl-showmap -r -i tmp_in -o tmp_out " + target_path.string());
 
     ifstream f(seedfile);
+    // cout << "hehe3" << endl;
     f.read(seed, MAX_FILE);
+    // cout << "hehe2" << endl;
     parse_map_file("tmp_out/" + seedname, base_cov);
+    // cout << "hehe1" << endl;
     fs::remove(seedfile);
+    // cout << "hehe4" << endl;
 
     size_t len = f.gcount();
+    f.close();
     auto FS = new fraction[len][256], FD = new fraction[len][256];
     fraction *alpha_x2 = new fraction[len];
     vector<pair<int, int>> fields;
     fraction last_mi = {UINT_MAX, UINT_MAX};
     for (int i = 0; i < len; ++i)
     {
+        cout << "[-] " << i << "/" << len << "\n";
         // Feature extraction
         char old_chr = seed[i];
         for (int j = 0; j < 256; ++j)
