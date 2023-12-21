@@ -1,1 +1,1 @@
-docker run --rm -it -v .:/src aflplusplus/aflplusplus 
+docker run --rm -it -v .:/src -w /src aflplusplus/aflplusplus 
